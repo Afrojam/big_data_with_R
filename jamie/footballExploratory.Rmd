@@ -29,6 +29,9 @@ players %>%
 ```{r}
 players %>%
   sapply(class)
+
+class %>%
+  sapply(players,.)
 ```
 
 
@@ -56,6 +59,13 @@ LIMIT 6
 players %>%
   filter(birthday >= "1998") %>%
   head
+
+dbGetQuery(sql_con, "
+Select birthday
+from player
+where birthday > '1998'
+limit 5
+")
 ```
 
 ## ORDER ~ arrange
@@ -64,6 +74,13 @@ players %>%
 players %>%
   arrange(birthday) %>%
   head
+
+dbGetQuery(sql_con, "
+select birthday
+from player
+order by birthday
+limit 5
+           ")
 ```
 
 ## aggregators ~ summarise
@@ -79,6 +96,14 @@ players %>%
 players %>%
   mutate(weight_kg = weight*0.45359237) %>%
   summarise(weight=mean(weight_kg), height=mean(height))
+
+dbGetQuery(sql_con, "
+select avg(weight*0.45359237) as weight,
+avg(height) as height
+from player
+")
+
+"select avg(weight*0.45359237) as weight, avg(height) as height from player" %>% dbGetQuery(sql_con,.)
 ```
 
 ## GROUP BY
@@ -87,10 +112,18 @@ players %>%
 players %>%
   mutate(year=as.numeric(substring(birthday, 1, 4))) %>%
   group_by(year) %>%
-  summarise(weight=mean(height)) %>%
-  ggplot(aes(year, weight)) +
+  summarise(height=mean(height)) %>%
+  ggplot(aes(year, height)) +
   geom_line(colour="darkorange") +
   theme_minimal()
+
+dbGetQuery(sql_con,
+           "select cast(substr(birthday,1,4) as numeric) as year, count(1), avg(height) as height
+           from player 
+           group by year") %>% ggplot(aes(year, height)) +
+  geom_line(colour="darkorange") +
+  theme_minimal()
+
 ```
 ```{r}
 players %>%
@@ -122,6 +155,10 @@ SELECT *
 FROM Match
 LIMIT 6
 ")
+
+Match %>%
+  head %>%
+  
 ```
 
 ```{r}

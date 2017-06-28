@@ -226,6 +226,18 @@ product_times_ordered_txt %>%
 ## Questions
 
 * For given department, plot the most popular product (with templating department).
+```{r}
+department_by_id_txt <- "select * from products_tbl where department_id = {{department_id}}
+"
+
+data <- list(department_id = "19")
+
+department_by_id_txt %>%
+  whisker.render(data) %>%
+  dbGetQuery(sc,.)
+
+```
+
 * For given day, rank department popularity.
 
 ## More on orders (Window Functions)
@@ -263,19 +275,24 @@ WHERE user_id <= 10
 
 ```{r}
 "
-SELECT product_id
-,   AVG(products_number) AS avg_products_number
+SELECT pn.product_id, o.product_name,   
+AVG(products_number) AS avg_products_number
 FROM (
     SELECT order_id
     ,   product_id
     ,   COUNT(product_id)  OVER(partition by order_id) AS products_number
     FROM order_products__train_tbl
 ) pn
-GROUP BY product_id
+    LEFT JOIN (
+            SELECT  product_id, product_name
+            FROM products_tbl) o
+    ON o.product_id = pn.product_id
+GROUP BY pn.product_id, o.product_name
 ORDER BY avg_products_number DESC
 LIMIT 100
 " %>%
 dbGetQuery(sc, .)
 ```
 
-* Could modify the query and add prduct name?
+* Could modify the query and add prduct name? Did (left join)
+
