@@ -293,4 +293,41 @@ orders %>%
   mutate(days_since_first_order = cumsum(days_since_prior_order)) %>%
   mutate(days_since_first_order=ifelse(is.null(days_since_prior_order), 0, days_since_first_order))
 ```
+```{r}
+order_products__prior %>%
+  group_by(order_id) %>%
+summarise(n_products = n()) %>%
+  group_by(n_products) %>%
+  summarise(n_orders = n()) %>%
+  filter(n_products <= 56) %>%
+  collect %>%
+  ggplot(aes(n_products, n_orders)) +
+  geom_col(fill="darkorange") +
+  theme_minimal()
+
+
+
+
+dbGetQuery(sc,"
+           select n_products,
+count(order_id) as n_orders
+from(
+select order_id,
+count(1) as n_products
+from order_products__prior_tbl
+group by order_id) op
+group by n_products
+
+") %>%
+  ggplot(aes(n_products, n_orders)) +
+  geom_bar(stat = "identity") +
+  theme_minimal()
+```
+```{r}
+dbGetQuery(sc, "
+           select order_id,
+count(1) as n_products
+from order_products__prior_tbl
+group by order_id")
+```
 

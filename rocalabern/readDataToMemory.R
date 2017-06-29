@@ -13,6 +13,7 @@ orders <- NULL
 products <- NULL
 
 readInstacart <- function() {
+  #poner <<- hace que la variable sea global. Si vamos a jugar con nuevas tablas, hace falta cargarlas de esta manera.
   order_products__prior <<- 
     spark_read_csv(sc, "order_products__prior_tbl", 
                    file.path(DATA_DIR, "order_products__prior.csv"))
