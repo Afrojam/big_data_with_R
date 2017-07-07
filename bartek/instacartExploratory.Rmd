@@ -41,6 +41,7 @@ orders_prev <- dbGetQuery(sc,
 "SELECT * 
 FROM orders_tbl 
 LIMIT 100")
+
 orders_prev
 ```
  
@@ -158,19 +159,51 @@ ORDER BY n_orders DESC
 ")
 ```
 
+
 * The most popular hour of doing order? 
 * The most reordered products?
 * The less reorderd product?
 * Plot histogram of number of products in an order.
+* What is the most popular department? 
 
 ```{r}
 dbGetQuery(sc, 
-"SELECT order_id
-,   COUNT(1) AS n_products
+"
+SELECT COUNT(DISTINCT order_id)
 FROM order_products__prior_tbl
-GROUP BY order_id
-LIMIT 100
 ")
+```
+
+
+```{r}
+dbGetQuery(sc, 
+"
+SELECT n_products
+,   COUNT(order_id) AS n_orders
+FROM (
+    SELECT order_id
+    ,   COUNT(1) AS n_products
+    FROM order_products__prior_tbl
+    GROUP BY order_id) op
+GROUP BY n_products
+") %>%
+  filter(n_products <= 50) %>%
+  ggplot(aes(n_products, n_orders)) +
+  geom_col(fill="darkorange") +
+  theme_minimal()
+```
+
+```{r}
+order_products__prior %>%
+  group_by(order_id) %>%
+  summarise(n_products = n()) %>%
+  group_by(n_products) %>%
+  summarise(n_orders = n()) %>%
+  filter(n_products <= 50) %>%
+  collect %>%
+  ggplot(aes(n_products, n_orders)) +
+  geom_col(fill="darkorange") +
+  theme_minimal()
 ```
 
 * What is the most popular department? 
@@ -178,7 +211,6 @@ LIMIT 100
 ```{r}
 dbGetQuery(sc, "DESC orders_tbl")
 ```
-
 
 ## Whisker, magrittr
 
@@ -213,6 +245,7 @@ product_times_ordered_txt %>%
   whisker.render(data) %>%
   cat
 ```
+
 ```{r}
 data <- list(productId = 1)
 
@@ -231,8 +264,6 @@ product_times_ordered_txt %>%
 
 ## More on orders (Window Functions)
 
-
-
 ```{r}
 dbGetQuery(sc, 
 "
@@ -243,7 +274,6 @@ GROUP BY days_since_prior_order
 ") 
 ```
 
-
 ```{r}
 dbGetQuery(sc, 
 "SELECT * 
@@ -251,6 +281,7 @@ FROM orders_tbl
 WHERE user_id <= 10
 ")
 ```
+
 ```{r}
 dbGetQuery(sc, 
 "SELECT user_id
@@ -260,6 +291,7 @@ FROM orders_tbl
 WHERE user_id <= 10 
 ")
 ```
+
 * Product that is usually orders in numerous baskets
 
 ```{r}
@@ -279,6 +311,9 @@ LIMIT 100
 dbGetQuery(sc, .)
 ```
 
+
+* Could modify the query and add prduct name?
+
 * Could modify the query and add product name?
 
 * Product that is usually orders in small baskets.
@@ -294,6 +329,7 @@ orders %>%
   mutate(days_since_first_order=ifelse(is.null(days_since_prior_order), 0, days_since_first_order))
 ```
 ```{r}
+<<<<<<< HEAD
 order_products__prior %>%
   group_by(order_id) %>%
 summarise(n_products = n()) %>%
@@ -329,5 +365,21 @@ dbGetQuery(sc, "
 count(1) as n_products
 from order_products__prior_tbl
 group by order_id")
+=======
+"
+SELECT user_id
+,   days_since_prior_order
+,   COALESCE(
+        SUM(days_since_prior_order) OVER 
+        (PARTITION BY user_id ORDER BY order_number ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 
+    0)  AS days_since_first_order
+,   order_number
+FROM orders_tbl
+WHERE user_id <= 10
+ORDER BY user_id
+,   order_number
+" %>%
+dbGetQuery(sc, .)
+>>>>>>> 85eabd6cb68ca28466228f0f64ccaf76db64b9a8
 ```
 
