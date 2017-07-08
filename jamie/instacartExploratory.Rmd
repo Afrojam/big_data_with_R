@@ -296,3 +296,47 @@ dbGetQuery(sc, .)
 
 * Could modify the query and add prduct name? Did (left join)
 
+
+Final project.
+SQL sentences
+
+1) Number of products by day
+```{r}
+
+"SELECT p.order_dow
+    , count(product_id) number_of_products_by_day
+    FROM order_products__prior_tbl op
+left join (select order_id, order_dow from orders_tbl) as p 
+on p.order_id = op.order_id
+group by p.order_dow
+order by p.order_dow desc
+limit 10" %>%
+  dbGetQuery(sc, .) %>%
+  ggplot(aes(order_dow, number_of_products_by_day)) +
+  geom_line(colour="darkorange") +
+  theme_minimal()
+
+"select product_id,
+count(product_id) over (partition by order_id)
+from order_products__prior_tbl" %>%
+  dbGetQuery(sc,.)
+
+select id, channel
+from (select id, channel, count(*) as cnt,
+             row_number() over (partition by id order by count(*) desc) as seqnum
+      from table t
+      group by id, channel
+     ) ic
+where seqnum = 1;
+
+```
+
+2) Products that are ordered on the same day of the week (at least once)
+```{r}
+order_products__prior %>%
+  left_join(products, by=c("product_id" = "product_id"))%>%
+  left_join(orders, (by=c("order_id" = "order_id"))) %>%
+  select(product_name, order_dow) %>%
+  arrange(desc(order_dow))
+```
+
