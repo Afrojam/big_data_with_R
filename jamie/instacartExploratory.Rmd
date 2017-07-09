@@ -300,43 +300,71 @@ dbGetQuery(sc, .)
 Final project.
 SQL sentences
 
-1) Number of products by day
+1) Products more ordered by day of the week and it's quantity
 ```{r}
-
-"SELECT p.order_dow
-    , count(product_id) number_of_products_by_day
-    FROM order_products__prior_tbl op
-left join (select order_id, order_dow from orders_tbl) as p 
-on p.order_id = op.order_id
-group by p.order_dow
-order by p.order_dow desc
-limit 10" %>%
-  dbGetQuery(sc, .) %>%
-  ggplot(aes(order_dow, number_of_products_by_day)) +
-  geom_line(colour="darkorange") +
-  theme_minimal()
-
-"select product_id,
-count(product_id) over (partition by order_id)
-from order_products__prior_tbl" %>%
+d <-"select a.*, p.product_name
+from(
+  select o.order_dow, opp.product_id, count(opp.product_id) quantity
+  from order_products__prior_tbl  opp
+  left join
+    (select order_dow, order_id
+    from orders_tbl
+    ) o
+  on opp.order_id=o.order_id
+  group by order_dow, opp.product_id) a 
+join 
+  (select max(quantity) as max_quantity from 
+    (select o.order_dow, opp.product_id, count(opp.product_id) quantity
+      from order_products__prior_tbl  opp
+      left join
+        (select order_dow, order_id
+        from orders_tbl
+        ) o
+      on opp.order_id=o.order_id
+      group by order_dow, opp.product_id) a
+  group by order_dow) b
+on a.quantity = b.max_quantity
+join
+  (select product_name, product_id
+  from products_tbl) p
+  on a.product_id = p.product_id
+order by order_dow" %>%
   dbGetQuery(sc,.)
 
-select id, channel
-from (select id, channel, count(*) as cnt,
-             row_number() over (partition by id order by count(*) desc) as seqnum
-      from table t
-      group by id, channel
-     ) ic
-where seqnum = 1;
+d %>%
+  ggplot(
+    aes(reorder(order_dow, quantity, function(x) x), 
+        quantity, fill=product_name)) +
+  geom_bar(stat="identity") +
+  coord_flip() + 
+  scale_y_continuous(label=scales::comma) +
+  xlab("order_dow") +
+  ylab("quantity") +
+  theme_minimal()
+
+
 
 ```
 
-2) Products that are ordered on the same day of the week (at least once)
+2) 5 users with max number of products in a order
 ```{r}
-order_products__prior %>%
-  left_join(products, by=c("product_id" = "product_id"))%>%
-  left_join(orders, (by=c("order_id" = "order_id"))) %>%
-  select(product_name, order_dow) %>%
-  arrange(desc(order_dow))
+
+d <- "select user_id, a.order_id, number_products from orders_tbl b
+join
+(select order_id, count(product_id) number_products from order_products__prior_tbl
+  group by order_id) a
+on b.order_id = a.order_id
+order by number_products desc
+limit 10" %>%
+  dbGetQuery(sc,.)
+
+d %>%
+  ggplot(
+    aes(reorder(user_id, number_products), 
+        number_products, fill=user_id)) +
+  geom_bar(stat="identity") + 
+  xlab("User") +
+  ylab("Number of products") +
+  theme_minimal()
 ```
 
